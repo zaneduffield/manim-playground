@@ -1,0 +1,6 @@
+venvs/
+media/
+videos/
+.vscode
+__pycache__
+*.code-workspace
