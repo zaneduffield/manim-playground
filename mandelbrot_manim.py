@@ -77,5 +77,82 @@ class MandelbrotManim(MandelbrotGrid):
                 self.play(*anims, run_time=0.5)
 
 
+class Cardioid(MandelbrotGrid):
+    def outline_main_bulb(self):
+        path = VMobject()
+        dot = Dot()
+        path.set_points_as_corners([dot.get_center(), dot.get_center()])
+        path.add_updater(lambda path: path.add_points_as_corners([dot.get_center()]))
+        self.add(path, dot)
+
+        FIXED_RADIUS = 1 / 4
+        ROTATING_RADIUS = FIXED_RADIUS
+        fixed_circle = Circle(radius=FIXED_RADIUS).move_to(ORIGIN)
+        rotating_circle = Circle(radius=ROTATING_RADIUS).move_to(
+            RIGHT * (FIXED_RADIUS + ROTATING_RADIUS)
+        )
+        self.add(fixed_circle, rotating_circle)
+
+        RADIANS_PER_SEC = TAU / 4
+        TOTAL_ROTATION = TAU
+
+        dot.angle = PI
+
+        def rotate_dot(dot: Dot, dt: float):
+            dot.angle = (dot.angle + RADIANS_PER_SEC * dt) % TAU
+            dot.move_to(rotating_circle.point_from_proportion(dot.angle / TAU))
+
+        dot.add_updater(rotate_dot)
+
+        self.play(
+            Rotating(
+                rotating_circle,
+                angle=TOTAL_ROTATION,
+                about_point=fixed_circle.get_center(),
+                run_time=TOTAL_ROTATION / RADIANS_PER_SEC,
+            )
+        )
+        dot.remove_updater(rotate_dot)
+
+    def construct(self):
+        super().construct()
+
+        x = np.linspace(-1, 1, 50)
+        y = np.linspace(-1, 1, 50)
+        xx, yy = np.meshgrid(x, y)
+        points = xx + 1j * yy
+        points_and_dots = [
+            [point, Dot(self.plane.number_to_point(point), radius=0.001)]
+            for row in points
+            for point in row
+            if np.abs(point) < 1
+        ]
+
+        self.outline_main_bulb()
+
+        unit_circle_desc = (
+            VGroup(
+                Tex(
+                    r"""\text{These are some points on the unit disk} \hspace{1cm} \{ z \mid \abs{z} \leq 1 \}"""
+                ),
+            )
+            .arrange(DOWN, buff=1)
+            .to_corner(UP + LEFT)
+            .scale(0.5)
+        )
+
+        self.play(ShowCreation(unit_circle_desc))
+        self.add(*(dot for _, dot in points_and_dots))
+
+        self.play(
+            *(
+                dot.animate.move_to(
+                    self.plane.number_to_point(point / 2 * (1 - point / 2))
+                )
+                for point, dot in points_and_dots
+            )
+        )
+
+
 if __name__ == "__main__":
-    MandelbrotManim().construct()
+    Cardioid().construct()
