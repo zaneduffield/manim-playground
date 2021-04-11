@@ -27,7 +27,26 @@ def mandelbrot(points: np.ndarray):
 
 
 class MandelbrotGrid(Scene):
+    FIXED_RADIUS = 1 / 4
+    ROTATING_RADIUS = FIXED_RADIUS
+
+    BROT_FRAME_HEIGHT = 2.5
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            camera_config={
+                "frame_config": {
+                    "frame_shape": (
+                        self.BROT_FRAME_HEIGHT * ASPECT_RATIO,
+                        self.BROT_FRAME_HEIGHT,
+                    )
+                }
+            },
+            **kwargs
+        )
+
     def construct(self):
+        super().construct()
         self.plane = ComplexPlane()
         self.play(ShowCreation(self.plane, run_time=1, lag_ratio=0.1))
 
@@ -85,11 +104,9 @@ class Cardioid(MandelbrotGrid):
         path.add_updater(lambda path: path.add_points_as_corners([dot.get_center()]))
         self.add(path, dot)
 
-        FIXED_RADIUS = 1 / 4
-        ROTATING_RADIUS = FIXED_RADIUS
-        fixed_circle = Circle(radius=FIXED_RADIUS).move_to(ORIGIN)
-        rotating_circle = Circle(radius=ROTATING_RADIUS).move_to(
-            RIGHT * (FIXED_RADIUS + ROTATING_RADIUS)
+        fixed_circle = Circle(radius=self.FIXED_RADIUS).move_to(ORIGIN)
+        rotating_circle = Circle(radius=self.ROTATING_RADIUS).move_to(
+            RIGHT * (self.FIXED_RADIUS + self.ROTATING_RADIUS)
         )
         self.add(fixed_circle, rotating_circle)
 
