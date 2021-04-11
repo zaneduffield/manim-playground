@@ -107,18 +107,23 @@ class MandelbrotManim(MandelbrotGrid):
 
 
 class Cardioid(MandelbrotGrid):
+    STROKE_WIDTH = 1
+
     def outline_main_bulb(self):
         path = VMobject()
-        dot = Dot()
+        dot = SmallDot()
         path.set_points_as_corners([dot.get_center(), dot.get_center()])
         path.add_updater(lambda path: path.add_points_as_corners([dot.get_center()]))
-        self.add(path, dot)
+        self.add(path)
 
-        fixed_circle = Circle(radius=self.FIXED_RADIUS).move_to(ORIGIN)
-        rotating_circle = Circle(radius=self.ROTATING_RADIUS).move_to(
-            RIGHT * (self.FIXED_RADIUS + self.ROTATING_RADIUS)
-        )
-        self.add(fixed_circle, rotating_circle)
+        fixed_circle = Circle(
+            radius=self.FIXED_RADIUS, stroke_width=self.STROKE_WIDTH
+        ).move_to(ORIGIN)
+        rotating_circle = Circle(
+            radius=self.ROTATING_RADIUS, stroke_width=self.STROKE_WIDTH
+        ).move_to(RIGHT * (self.FIXED_RADIUS + self.ROTATING_RADIUS))
+
+        construction = VGroup(fixed_circle, rotating_circle, dot)
 
         RADIANS_PER_SEC = TAU / 4
         TOTAL_ROTATION = TAU
@@ -131,6 +136,7 @@ class Cardioid(MandelbrotGrid):
 
         dot.add_updater(rotate_dot)
 
+        self.play(FadeIn(construction))
         self.play(
             Rotating(
                 rotating_circle,
@@ -140,6 +146,7 @@ class Cardioid(MandelbrotGrid):
             )
         )
         dot.remove_updater(rotate_dot)
+        self.play(FadeOut(construction))
 
     def construct(self):
         super().construct()
