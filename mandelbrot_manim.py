@@ -46,10 +46,10 @@ class MandelbrotGrid(Scene):
         )
 
     def is_point_in_main_cardioid(self, point: np.complex_):
-        return np.abs(1 - np.sqrt(1 - 4*point)) <= 1
+        return np.abs(1 - np.sqrt(1 - 4 * point)) <= 1
 
     def is_point_in_left_circle(self, point: np.complex_):
-        return np.abs(point + 1) <= 1/4
+        return np.abs(point + 1) <= 1 / 4
 
     def construct(self):
         super().construct()
@@ -76,7 +76,10 @@ class MandelbrotManim(MandelbrotGrid):
             [point, None]
             for row in points
             for point in row
-            if not (self.is_point_in_main_cardioid(point[0]) or self.is_point_in_left_circle(point[0]))
+            if not (
+                self.is_point_in_main_cardioid(point[0])
+                or self.is_point_in_left_circle(point[0])
+            )
         ]
         point_radius = 10 / (shape[0] * shape[1])
 
