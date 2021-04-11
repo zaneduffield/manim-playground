@@ -146,21 +146,24 @@ class Cardioid(MandelbrotGrid):
             )
         )
         dot.remove_updater(rotate_dot)
+        self.remove(path)
         self.play(FadeOut(construction))
 
     def construct(self):
         super().construct()
 
-        x = np.linspace(-1, 1, 50)
-        y = np.linspace(-1, 1, 50)
+        x = np.linspace(-1, 1, 25)
+        y = np.linspace(-1, 1, 25)
         xx, yy = np.meshgrid(x, y)
         points = xx + 1j * yy
-        points_and_dots = [
-            [point, Dot(self.plane.number_to_point(point), radius=0.001)]
-            for row in points
-            for point in row
-            if np.abs(point) < 1
-        ]
+        unit_disk_dots = VGroup(
+            *(
+                Dot(self.plane.number_to_point(point), radius=0.001)
+                for row in points
+                for point in row
+                if np.abs(point) < 1
+            )
+        )
 
         self.outline_main_bulb()
 
@@ -174,18 +177,20 @@ class Cardioid(MandelbrotGrid):
             .to_corner(UP + LEFT)
             .scale(0.5)
         )
-
         self.play(ShowCreation(unit_circle_desc))
-        self.add(*(dot for _, dot in points_and_dots))
 
+        unit_circle = Circle(radius=1, stroke_width=self.STROKE_WIDTH).move_to(ORIGIN)
+        transform_group = VGroup(unit_disk_dots, unit_circle)
+        self.play(FadeIn(transform_group))
+
+        transform = lambda z: z / 2 * (1 - z / 2)
         self.play(
-            *(
-                dot.animate.move_to(
-                    self.plane.number_to_point(point / 2 * (1 - point / 2))
-                )
-                for point, dot in points_and_dots
-            )
+            transform_group.animate.apply_complex_function(transform),
+            run_time=5,
         )
+
+        self.plane.prepare_for_nonlinear_transform()
+        self.play(self.plane.animate.apply_complex_function(transform), run_time=5)
 
 
 if __name__ == "__main__":
