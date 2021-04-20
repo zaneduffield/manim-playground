@@ -1,13 +1,94 @@
+from typing import List
 from manimlib import *
+from collections import Counter, defaultdict
 
 # from manim import *
 
 from numba import njit, prange
 from random import randint
+from numpy.polynomial import Polynomial
 
+import sympy as sp
 import numpy as np
 
 BAIL_OUT_R2 = 4
+
+
+def get_sorted_prime_divisors(n: int):
+    divisors = []
+    i = 2
+    while n > 1:
+        if n % i == 0:
+            divisors.append(i)
+            n = n / i
+        else:
+            i += 1
+
+    return divisors
+
+
+def periodic_divisors(n: int):
+    return [i for i in range(1, n // 2 + 1) if n % i == 0]
+
+
+def test_periodic_divisors():
+    assert sorted(periodic_divisors(1)) == []
+    assert sorted(periodic_divisors(2)) == [1]
+    assert sorted(periodic_divisors(3)) == [1]
+    assert sorted(periodic_divisors(4)) == [1, 2]
+    assert sorted(periodic_divisors(5)) == [1]
+    assert sorted(periodic_divisors(6)) == [1, 2, 3]
+    assert sorted(periodic_divisors(8)) == [1, 2, 4]
+    assert sorted(periodic_divisors(100)) == [1, 2, 4, 5, 10, 20, 25, 50]
+
+
+def get_hyperbolic_centers(max_period: int) -> List[List[np.complex_]]:
+    x = sp.var("x")
+    p = x
+
+    reduced_polys = []
+    roots = []
+    for period in range(1, max_period):
+        reduced_poly = p
+        for i in periodic_divisors(period):
+            q, r = sp.div(reduced_poly, reduced_polys[i - 1])
+            assert r == 0
+            reduced_poly = q
+
+        # roots.append(np.complex128(sp.solve(reduced_poly, minimal=True)))
+        roots.append(np.roots(sp.Poly(reduced_poly).all_coeffs()))
+        poly = sp.Poly(reduced_poly)
+        reduced_polys.append(reduced_poly)
+        p = p * p + x
+
+    return roots
+
+
+def test_hyperbolic_centers():
+    for i, roots in enumerate(get_hyperbolic_centers(10)):
+        init = roots.copy()
+        for _ in range(i):
+            roots = roots * roots + init
+
+        assert np.max(np.abs(roots)) < 0.001
+
+
+def get_approx_hyperbolic_bulbs(max_period):
+    for q in range(2, max_period):
+        out = []
+        for p in range(1, q):
+            if np.gcd(p, q) != 1:
+                continue
+            t = np.pi * p / q
+            z = np.exp(2 * t * 1j) / 2
+            z = z * (1 - z)
+            tangent_perpendicular = 1 / 2 * (np.exp(2 * t * 1j) - np.exp(4 * t * 1j))
+            tangent_perpendicular /= np.abs(tangent_perpendicular)
+            r = 1 / (q * q) * np.sin(t)
+            z += r * tangent_perpendicular
+            circle = Circle(radius=r, stroke_width=np.sqrt(r)).move_to([z.real, z.imag, 0])
+            out.append(circle)
+        yield out
 
 
 @njit(parallel=True, fastmath=True)
@@ -146,12 +227,20 @@ class Cardioid(MandelbrotGrid):
             )
         )
         dot.remove_updater(rotate_dot)
-        self.remove(path)
+        # self.remove(path)
         self.play(FadeOut(construction))
 
     def construct(self):
         super().construct()
 
+        # self.outline_main_bulb()
+
+        for circles in get_approx_hyperbolic_bulbs(1000):
+            self.play(FadeIn(VGroup(*circles)), run_time=0.25)
+
+        self.wait(10)
+
+    def transform_unit_disk(self):
         x = np.linspace(-1, 1, 25)
         y = np.linspace(-1, 1, 25)
         xx, yy = np.meshgrid(x, y)
@@ -164,8 +253,6 @@ class Cardioid(MandelbrotGrid):
                 if np.abs(point) < 1
             )
         )
-
-        self.outline_main_bulb()
 
         unit_circle_desc = (
             VGroup(
@@ -194,4 +281,6 @@ class Cardioid(MandelbrotGrid):
 
 
 if __name__ == "__main__":
+    # test_periodic_divisors()
+    # test_hyperbolic_centers()
     Cardioid().construct()
