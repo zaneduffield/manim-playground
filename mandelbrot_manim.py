@@ -306,8 +306,8 @@ class Cardioid(MandelbrotGrid):
 
 
 if __name__ == "__main__":
-    # Cardioid().construct()
+    Cardioid().construct()
     # MandelbotAllOrbits().construct()
     # MandelbotPeriod3MoreOrbits().construct()
-    test_periodic_divisors()
-    test_hyperbolic_centers()
+    # test_periodic_divisors()
+    # test_hyperbolic_centers()
