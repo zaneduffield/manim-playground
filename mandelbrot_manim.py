@@ -72,10 +72,32 @@ def test_hyperbolic_centers():
         print(f"passed period {i+1} centers ({len(roots)} solutions found)")
 
 
-def get_approx_hyperbolic_bulbs(max_period):
-    for q in range(2, max_period):
-        out = []
+@njit
+def get_recursive_approx_hyperbolic_bulbs(center: np.complex128, radius: float, rotation: np.complex128, max_depth: int, max_period: int) -> List[Circle]:
+    out = [(np.complex128(0), np.float64(0)) for x in range(0)]
+
+    if max_depth == 0:
+        return out
+
+    for q in prange(2, max_period):
         for p in range(1, q):
+            if np.gcd(p, q) != 1:
+                continue
+            t = np.pi * p / q
+            r = radius / (q * q) * np.sin(t)
+            new_rotation = -np.exp(2 * t * 1j) * rotation
+            z = center + (radius + r) * new_rotation
+            out.append((z, r))
+            out += get_recursive_approx_hyperbolic_bulbs(z, r, new_rotation, max_depth - 1, max_period)
+    
+    return out
+        
+    
+@njit
+def _get_approx_hyperbolic_bulbs(max_period):
+    for q in range(2, max_period):
+        out = [(np.complex128(0), np.float64(0)) for x in range(0)]
+        for p in prange(1, q):
             if np.gcd(p, q) != 1:
                 continue
             t = np.pi * p / q
@@ -85,9 +107,13 @@ def get_approx_hyperbolic_bulbs(max_period):
             tangent_perpendicular /= np.abs(tangent_perpendicular)
             r = 1 / (q * q) * np.sin(t)
             z += r * tangent_perpendicular
-            circle = Circle(radius=r, stroke_width=np.sqrt(r)).move_to([z.real, z.imag, 0])
-            out.append(circle)
+            out.append((z, r))
+            out += get_recursive_approx_hyperbolic_bulbs(z, r, tangent_perpendicular, 2, int(min(np.sqrt(2*r), 0.3) * max_period))
         yield out
+
+def get_approx_hyperbolic_bulbs(max_period):
+    for circles in _get_approx_hyperbolic_bulbs(max_period):
+        yield [Circle(radius=r, stroke_width=np.sqrt(r)).move_to([z.real, z.imag, 0]) for (z, r) in circles]
 
 
 @njit(parallel=True, fastmath=True)
@@ -260,7 +286,7 @@ class Cardioid(MandelbrotGrid):
 
         # self.outline_main_bulb()
 
-        for circles in get_approx_hyperbolic_bulbs(1000):
+        for circles in get_approx_hyperbolic_bulbs(50):
             self.play(FadeIn(VGroup(*circles)), run_time=0.25)
 
         self.wait(10)
